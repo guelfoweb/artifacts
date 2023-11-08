@@ -5,9 +5,9 @@ import time
 import shutil
 import argparse
 
-from lib import apk_file, json_file, search_file, match_regex, manifest
-from lib import sandbox, similarity, intent, match_network, match_root
-from lib import match_strings, similarity, report
+from lib import apk_file, json_file, search_file, intent, manifest
+from lib import match_strings, match_regex, match_network, match_root
+from lib import sandbox, similarity, report
 
 __version__ = '1.0.4'
 
