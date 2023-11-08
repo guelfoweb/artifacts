@@ -1,0 +1,2 @@
+# artifacts
+APK strings analysis
