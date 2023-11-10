@@ -1,5 +1,6 @@
 from . import match_regex
 import base64
+import re
 
 def get(folder):
 	regex = {
@@ -22,14 +23,15 @@ def get(folder):
 				if not (len(string) % 2) == 0:
 					continue
 				# ok, it is even!
-				if any(char.isupper() for char in string) and any(char.islower() for char in string) and any(char.isnumeric() for char in string):
+				if any(char.isupper() for char in string) and any(char.islower() for char in string):
 					try:
-						base64_bytes  = string.encode('ascii')
-						message_bytes = base64.b64decode(base64_bytes)
-						message       = message_bytes.decode('ascii')
-						#print (message)
+						message = base64.b64decode(string).decode('ascii')
+						# checks if decoded base64 sting matches the regex
+						if None in [re.match("[A-Za-z0-9}{)(-+/.=]", i) for i in message]:
+							continue
 					except:
 						continue
+
 					valid_base64.append((string, message))
 			string_list = valid_base64
 		

@@ -9,8 +9,9 @@ from lib import apk_file, json_file, search_file, intent, manifest
 from lib import match_strings, match_regex, match_network, match_root
 from lib import sandbox, similarity, report
 
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 
+# 1.0.5 checks if decoded base64 sting matches the regex
 # 1.0.4 decodes base64 strings
 # 1.0.3 fix permission non found in result["activity"]["permission"]
 # 1.0.2 fix extractAPK file name too long
