@@ -1,6 +1,13 @@
 # artifacts
 APK strings analysis
 
+# important:
+- This tool is useful for a first analysis
+- This tool extracts known strings from the APK
+- This tool can produce false positive results
+- Always check the results with appropriate tools like Jadx or Bytecode-Viewer
+
+
 ## cmd
 
 ```bash
