@@ -1,7 +1,8 @@
+import os
 import json
 
 def load_json(file):
-	f = open(file)
+	f = open("data" + os.sep + file)
 	return json.load(f)
 
 def write_json(data, file):

@@ -1,10 +1,6 @@
 import json
 from . import json_file
 
-def load_json(file):
-	f = open(file)
-	return json.load(f)
-
 def jaccard_similarity(set1, set2):
 	# intersection of two sets
 	intersection = len(set1.intersection(set2))
@@ -24,8 +20,7 @@ def get(set_a):
 	i = dataset(set_a["intent"])
 
 	# load json database
-	json_pattern = "patterns.json"
-	json_data    = json_file.load_json(json_pattern)
+	json_data = json_file.load_json("patterns.json")
 
 	stats  = {}
 	values = {}
