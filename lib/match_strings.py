@@ -15,15 +15,22 @@ def get(folder):
 	result = {}
 	for item in regex.keys():
 		string_list = match_regex.inFolder(folder, regex[item], exclude)
-		# validate base64: UPPER, lower, num3r1c
+
 		if item == "base64":
 			valid_base64 = []
+			exclude = ["endsWith"] # known false positives
 			for string in string_list:
 				# is odd
 				if not (len(string) % 2) == 0:
 					continue
+
 				# ok, it is even!
-				if any(char.isupper() for char in string) and any(char.islower() for char in string):
+				
+				# validate base64: UPPER, lower
+				if string not in exclude \
+					and any(char.isupper() for char in string) \
+					and any(char.islower() for char in string):
+					
 					try:
 						message = base64.b64decode(string).decode('ascii')
 						# checks if decoded base64 sting matches the regex

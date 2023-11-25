@@ -9,9 +9,10 @@ from lib import apk_file, json_file, search_file, intent, manifest
 from lib import match_strings, match_regex, match_network, match_root
 from lib import sandbox, similarity, report
 
-__version__ = '1.0.5'
+__version__ = '1.0.6'
 
-# 1.0.5 checks if decoded base64 sting matches the regex
+# 1.0.6 fix jaccard similarity coefficient
+# 1.0.5 checks if decoded base64 string matches the regex
 # 1.0.4 decodes base64 strings
 # 1.0.3 fix permission non found in result["activity"]["permission"]
 # 1.0.2 fix extractAPK file name too long
@@ -24,6 +25,7 @@ def main():
 	# args
 	parser.add_argument("apkfile", nargs='?', help="apk to analyze")
 	parser.add_argument("-v", "--version", action="version", version="%(prog)s " + __version__)
+	parser.add_argument("-r", "--report", help="add report to json result", action="store_true", required=False)
 	args = parser.parse_args()
 
 	apkfile = args.apkfile
@@ -33,6 +35,7 @@ def main():
 		parser.print_help(sys.stderr)
 		sys.exit()
 
+	global folder
 	folder = os.path.basename(apkfile+"_tmp")
 	
 	time_start = time.time()
@@ -69,9 +72,13 @@ def main():
 	
 	elapsed_time = time.time() - time_start
 
+	if args.report:
+		result.update({
+			"report": report.get(result)
+			})
+
 	# add report and elapsed_time
 	result.update({
-		"report": report.get(result),
 		"elapsed_time": round(elapsed_time, 2)
 		})
 
@@ -85,6 +92,8 @@ if __name__ == "__main__":
 		main()
 	except KeyboardInterrupt:
 		print("\nInterrupted")
+		# remove folder (global variable)
+		shutil.rmtree(folder)
 		try:
 			sys.exit(0)
 		except SystemExit:

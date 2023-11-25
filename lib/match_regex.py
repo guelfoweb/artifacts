@@ -52,7 +52,7 @@ def inFolder(folder, regex, exclude=False):
 				continue
 			filepaths.append(filepath)
 	
-	with concurrent.futures.ThreadPoolExecutor(max_workers=35) as executor:
+	with concurrent.futures.ThreadPoolExecutor(max_workers=25) as executor:
 		results_executor = {executor.submit(inFile, filepath, regex) for filepath in filepaths}
 
 	for item in concurrent.futures.as_completed(results_executor):
