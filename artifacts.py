@@ -11,11 +11,11 @@ from lib import sandbox, similarity, report
 
 __version__ = '1.0.6'
 
-# 1.0.6 fix jaccard similarity coefficient
+# 1.0.6 fixed jaccard similarity coefficient and added updatedb
 # 1.0.5 checks if decoded base64 string matches the regex
 # 1.0.4 decodes base64 strings
-# 1.0.3 fix permission non found in result["activity"]["permission"]
-# 1.0.2 fix extractAPK file name too long
+# 1.0.3 fixed permission non found in result["activity"]["permission"]
+# 1.0.2 fixed extractAPK file name too long
 # 1.0.1 added details to family
 # 1.0.0 start project
 
@@ -26,6 +26,7 @@ def main():
 	parser.add_argument("apkfile", nargs='?', help="apk to analyze")
 	parser.add_argument("-v", "--version", action="version", version="%(prog)s " + __version__)
 	parser.add_argument("-r", "--report", help="add report to json result", action="store_true", required=False)
+	parser.add_argument("--updatedb", help="update database with a new family", dest="family", required=False)
 	args = parser.parse_args()
 
 	apkfile = args.apkfile
@@ -47,8 +48,25 @@ def main():
 	md5 = apk_file.md5APK(apkfile)
 
 	# permission + application + intent
+	# it is a dict {"permission": [], "application": [], "intent": []}
 	activity = manifest.info(folder)
 	activity.update(intent.info(folder))
+
+	if args.family:
+		key = args.family
+		db  = json_file.load_json("patterns.json")
+
+		if key not in db.keys():
+			db.update({key: activity})
+			json_file.write_json(db, "patterns.json")
+			print ("database updated with", args.family)
+		else:
+			print ("already exists", args.family)
+
+		# remove folder and exit
+		shutil.rmtree(folder)
+		sys.exit(0)
+
 
 	family = []
 	if "permission" in activity.keys():
