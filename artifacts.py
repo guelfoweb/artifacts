@@ -9,8 +9,9 @@ from lib import apk_file, json_file, search_file, intent, manifest
 from lib import match_strings, match_regex, match_network, match_root
 from lib import sandbox, similarity, report
 
-__version__ = '1.0.6'
+__version__ = '1.0.7'
 
+# 1.0.7 added similarity table with prettytable dependency
 # 1.0.6 fixed jaccard similarity coefficient and added updatedb
 # 1.0.5 checks if decoded base64 string matches the regex
 # 1.0.4 decodes base64 strings
@@ -26,6 +27,7 @@ def main():
 	parser.add_argument("apkfile", nargs='?', help="apk to analyze")
 	parser.add_argument("-v", "--version", action="version", version="%(prog)s " + __version__)
 	parser.add_argument("-r", "--report", help="add report to json result", action="store_true", required=False)
+	parser.add_argument("-s", "--similarity", help="get similarities", action="store_true", required=False)
 	parser.add_argument("--updatedb", help="update database with a new family", dest="family", required=False)
 	args = parser.parse_args()
 
@@ -67,11 +69,17 @@ def main():
 		shutil.rmtree(folder)
 		sys.exit(0)
 
-
 	family = []
 	if "permission" in activity.keys():
-		family = similarity.get(activity)
+		all_families = True if args.similarity else False
+		family = similarity.get(activity, all_families)
 
+	if args.similarity:
+		print (family)
+		# remove folder and exit
+		shutil.rmtree(folder)
+		sys.exit(0)
+		
 	result = {}
 
 	# start analysis

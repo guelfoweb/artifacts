@@ -1,5 +1,6 @@
 import json
 from . import json_file
+from prettytable import PrettyTable
 
 def jaccard_similarity(set1, set2):
 	# intersection of two sets
@@ -13,7 +14,7 @@ def dataset(lista):
 	# return set of data
 	return set([p.split('.')[-1] for p in lista])
 
-def get(set_a):
+def get(set_a, all_families):
 	# reference list
 	p = dataset(set_a["permission"])
 	a = dataset(set_a["application"])
@@ -46,6 +47,19 @@ def get(set_a):
 
 	# sort stats keys
 	stats = sorted(stats.items(), key=lambda x:x[1], reverse=True)
+	
+	if all_families:
+		headers = ['family', 'permission', 'application', 'intent', 'total']
+		myTable = PrettyTable(headers)
+		for item in stats:
+			family = item[0]
+			total = item[1]
+			permission = values[family]['permission']
+			application = values[family]['application']
+			intent = values[family]['intent']
+			myTable.add_row([family, permission, application, intent, total])
+		return myTable
+	
 	family_name  = list(stats)[0][0]
 	family_match = list(stats)[0][1]
 

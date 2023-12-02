@@ -18,7 +18,7 @@ def get(folder):
 
 		if item == "base64":
 			valid_base64 = []
-			exclude = ["endsWith"] # known false positives
+			exclude = ["endsWith", "Visually"] # known false positives
 			for string in string_list:
 				# is odd
 				if not (len(string) % 2) == 0:
