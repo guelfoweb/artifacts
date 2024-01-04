@@ -8,9 +8,11 @@ import argparse
 from lib import apk_file, json_file, search_file, intent, manifest
 from lib import match_strings, match_regex, match_network, match_root
 from lib import sandbox, similarity, report
+from litejdb import LiteJDB
 
-__version__ = '1.0.7'
+__version__ = '1.0.8'
 
+# 1.0.8 added LiteJDB support to 'add', 'del' and 'list'
 # 1.0.7 added similarity table with prettytable dependency
 # 1.0.6 fixed jaccard similarity coefficient and added updatedb
 # 1.0.5 checks if decoded base64 string matches the regex
@@ -20,7 +22,39 @@ __version__ = '1.0.7'
 # 1.0.1 added details to family
 # 1.0.0 start project
 
+# load json database
+def load_db():
+	filename = 'data' + os.sep + 'patterns.json'
+	db = LiteJDB(filename)
+	db.load()
+	return db
+
+# LiteJDB delete
+def delete_family(name):
+	query = "name == '{name}'".format(name=name)
+	ids = db.query(query, "get_id")
+	if ids:	# [1]
+		for id in ids:
+			db.delete(id)
+	db.save()
+
+def add_family(name, activity):
+	query = "name == '{name}'".format(name=name)
+	exists = db.query(query, "get_id")
+	if not exists:
+		db.add({'name': name, 'permission': activity['permission'], 'application': activity['application'], 'intent': activity['intent']})
+		db.save()
+	else:
+		print (name, 'already exists at', exists)
+
+def list_families():
+	for index, row in db.df().iterrows():
+		print (row['name'])
+
 def main():
+	global db
+	db = load_db()
+
 	parser = argparse.ArgumentParser(prog="artifacts", description="apk analysis")
 
 	# args
@@ -28,14 +62,24 @@ def main():
 	parser.add_argument("-v", "--version", action="version", version="%(prog)s " + __version__)
 	parser.add_argument("-r", "--report", help="add report to json result", action="store_true", required=False)
 	parser.add_argument("-s", "--similarity", help="get similarities", action="store_true", required=False)
-	parser.add_argument("--updatedb", help="update database with a new family", dest="family", required=False)
+	parser.add_argument("-l", "--list-all", help="Lists all families in the db", action="store_true", required=False)
+	parser.add_argument("--del", help="Delete a family from db", dest="family_to_del", required=False)
+	parser.add_argument("--add", help="Add a new family to db", dest="family_to_add", required=False)
 	args = parser.parse_args()
 
 	apkfile = args.apkfile
 
 	# check if the domain name is correct
 	if not apkfile or not os.path.isfile(apkfile) or not apk_file.validateAPK(apkfile):
-		parser.print_help(sys.stderr)
+		# LiteJDB delete
+		if args.family_to_del:
+			name = args.family_to_del
+			delete_family(name)
+		# LiteJDB list
+		elif args.list_all:
+			list_families()
+		else:
+			parser.print_help(sys.stderr)
 		sys.exit()
 
 	global folder
@@ -50,33 +94,24 @@ def main():
 	md5 = apk_file.md5APK(apkfile)
 
 	# permission + application + intent
-	# it is a dict {"permission": [], "application": [], "intent": []}
+	# {"permission": [], "application": [], "intent": []}
 	activity = manifest.info(folder)
 	activity.update(intent.info(folder))
 
-	if args.family:
-		key = args.family
-		db  = json_file.load_json("patterns.json")
-
-		if key not in db.keys():
-			db.update({key: activity})
-			json_file.write_json(db, "patterns.json")
-			print ("database updated with", args.family)
-		else:
-			print ("already exists", args.family)
-
-		# remove folder and exit
+	# LiteJDB add
+	if args.family_to_add:
+		name = args.family_to_add
+		add_family(name, activity)
 		shutil.rmtree(folder)
 		sys.exit(0)
 
 	family = []
 	if "permission" in activity.keys():
 		all_families = True if args.similarity else False
-		family = similarity.get(activity, all_families)
+		family = similarity.get(activity, all_families, db.df())
 
 	if args.similarity:
 		print (family)
-		# remove folder and exit
 		shutil.rmtree(folder)
 		sys.exit(0)
 		
@@ -108,9 +143,7 @@ def main():
 		"elapsed_time": round(elapsed_time, 2)
 		})
 
-	# remove folder
 	shutil.rmtree(folder)
-
 	print (json.dumps(result, indent=4))
 
 if __name__ == "__main__":

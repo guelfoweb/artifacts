@@ -1,1 +1,2 @@
 prettytable==3.9.0
+litejdb @ git+https://github.com/guelfoweb/litejdb.git

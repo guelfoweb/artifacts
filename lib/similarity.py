@@ -14,23 +14,22 @@ def dataset(lista):
 	# return set of data
 	return set([p.split('.')[-1] for p in lista])
 
-def get(set_a, all_families):
+def get(set_a, all_families, patterns):
 	# reference list
 	p = dataset(set_a["permission"])
 	a = dataset(set_a["application"])
 	i = dataset(set_a["intent"])
 
-	# load json database
-	json_data = json_file.load_json("patterns.json")
-
 	stats  = {}
 	values = {}
-
-	for family in json_data.keys():
+	
+	for index, row in patterns.iterrows():
 		# database json_data
-		p1 = dataset(json_data[family]["permission"])
-		a1 = dataset(json_data[family]["application"])
-		i1 = dataset(json_data[family]["intent"])
+		p1 = dataset(row["permission"])
+		a1 = dataset(row["application"])
+		i1 = dataset(row["intent"])
+
+		family = row["name"]
 
 		# jaccard similarity of two sets
 		permission  = jaccard_similarity(p, p1) * 100
