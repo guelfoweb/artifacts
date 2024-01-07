@@ -8,6 +8,10 @@ def jaccard_similarity(set1, set2):
 	# Unions of two sets
 	union = len(set1.union(set2))
 	
+	# ZeroDivisionError: division by zero
+	if union == 0:
+		return 0
+
 	return intersection / union
 
 def dataset(lista):

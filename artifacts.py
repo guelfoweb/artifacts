@@ -10,8 +10,9 @@ from lib import match_strings, match_regex, match_network, match_root
 from lib import sandbox, similarity, report
 from litejdb import LiteJDB
 
-__version__ = '1.0.8'
+__version__ = '1.0.9'
 
+# 1.0.9 fix ZeroDivisionError in similarity
 # 1.0.8 added LiteJDB support to 'add', 'del' and 'list'
 # 1.0.7 added similarity table with prettytable dependency
 # 1.0.6 fixed jaccard similarity coefficient and added updatedb
