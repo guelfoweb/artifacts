@@ -10,8 +10,9 @@ from lib import match_strings, match_regex, match_network, match_root
 from lib import sandbox, similarity, report
 from litejdb import LiteJDB
 
-__version__ = '1.0.9'
+__version__ = '1.1.0'
 
+# 1.1.0 removed 'activity' and 'report' from json, now they are used separately
 # 1.0.9 fix ZeroDivisionError in similarity
 # 1.0.8 added LiteJDB support to 'add', 'del' and 'list'
 # 1.0.7 added similarity table with prettytable dependency
@@ -62,7 +63,8 @@ def main():
 	parser.add_argument("apkfile", nargs='?', help="apk to analyze")
 	parser.add_argument("-v", "--version", action="version", version="%(prog)s " + __version__)
 	parser.add_argument("-r", "--report", help="add report to json result", action="store_true", required=False)
-	parser.add_argument("-s", "--similarity", help="get similarities", action="store_true", required=False)
+	parser.add_argument("-s", "--similarity", help="shows the similarities", action="store_true", required=False)
+	parser.add_argument("-a", "--activity", help="shows the activities", action="store_true", required=False)
 	parser.add_argument("-l", "--list-all", help="Lists all families in the db", action="store_true", required=False)
 	parser.add_argument("--del", help="Delete a family from db", dest="family_to_del", required=False)
 	parser.add_argument("--add", help="Add a new family to db", dest="family_to_add", required=False)
@@ -99,6 +101,16 @@ def main():
 	activity = manifest.info(folder)
 	activity.update(intent.info(folder))
 
+	if args.activity:
+		print (json.dumps(activity, indent=4))
+		shutil.rmtree(folder)
+		sys.exit(0)
+
+	if args.report:
+		print (json.dumps(report.get(activity), indent=4))
+		shutil.rmtree(folder)
+		sys.exit(0)
+
 	# LiteJDB add
 	if args.family_to_add:
 		name = args.family_to_add
@@ -115,14 +127,13 @@ def main():
 		print (family)
 		shutil.rmtree(folder)
 		sys.exit(0)
-		
+
 	result = {}
 
 	# start analysis
 	result.update({
 		"version": __version__,
 		"md5": md5,
-		"activity": activity,
 		"dex": search_file.extension_sort(folder, '.dex'),		# search .dex file in folder
 		"library": search_file.extension_sort(folder, '.so'),	# search .so file in folder
 		"network": match_network.get(folder),
@@ -133,11 +144,6 @@ def main():
 		})
 	
 	elapsed_time = time.time() - time_start
-
-	if args.report:
-		result.update({
-			"report": report.get(result)
-			})
 
 	# add report and elapsed_time
 	result.update({

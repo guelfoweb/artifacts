@@ -1,7 +1,7 @@
 import os
 from . import json_file
 
-def get(result):
+def get(activity):
 	# https://gist.github.com/Watsonboy1989/fa01a6869d82062c770e137107693744
 	permission_categories = json_file.load_json("permission_categories.json")
 	# https://developer.android.com/reference/android/Manifest.permission
@@ -10,11 +10,11 @@ def get(result):
 	categories = {}
 	not_category = []
 
-	if not "permission" in result["activity"]:
+	if not "permission" in activity:
 		print ("permission not found")
 		return categories
 
-	permission_list = [item.split('.')[-1] for item in result["activity"]["permission"]]
+	permission_list = [item.split('.')[-1] for item in activity["permission"]]
 	for k in permission_list:
 		for key in permission_categories.keys():
 			if k in permission_categories[key]:
