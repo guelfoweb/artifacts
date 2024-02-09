@@ -1,19 +1,74 @@
 # artifacts
 APK strings analysis
 
-# important:
-- This tool is useful for a first analysis
-- This tool extracts known strings from the APK
-- This tool can produce false positive results
-- Always check the results with appropriate tools like Jadx or Bytecode-Viewer
+# Important:
+> [!NOTE]
+> - This tool is useful for a first analysis<br>
+> - This tool extracts known strings from the APK
 
+> [!WARNING] 
+> - This tool can produce false positive results<br>
+> - Always check the results with appropriate tools like `Jadx` or `Bytecode-Viewer`
 
-## analysis
+# Install
 
 ```bash
-$ python3 artifacts.py aggiornamento.apk
+git clone https://github.com/guelfoweb/artifacts.git
+cd artifacts
+pip install -r requirements.txt
 ```
-## output
+
+# Usage
+
+```bash
+python3 artifacts.py -h
+```
+### output
+
+```bash
+usage: artifacts [-h] [-v] [-r] [-s] [-a] [-l] [--del FAMILY_TO_DEL]
+                 [--add FAMILY_TO_ADD]
+                 [apkfile]
+
+apk analysis
+
+positional arguments:
+  apkfile              apk to analyze
+
+options:
+  -h, --help           show this help message and exit
+  -v, --version        show program's version number and exit
+  -r, --report         add report to json result
+  -s, --similarity     shows the similarities
+  -a, --activity       shows the activities
+  -l, --list-all       Lists all families in the db
+  --del FAMILY_TO_DEL  Delete a family from db
+  --add FAMILY_TO_ADD  Add a new family to db
+```
+
+# Examples
+
+In this example **SpyNote** malware was used.
+
+- [x] [Analysis](#analysis)
+- [x] [Similarity](#similarity)
+- [x] [Report](#report)
+
+## Analysis
+
+```bash
+python3 artifacts.py aggiornamento.apk
+```
+No parameters are required. The analysis shows:
+- the possible presence of `dex` files
+- any `libraries` used
+- statically detected `network` activities (check for false positives `ip`)
+- paths to get `root` privileges on Android devices
+- collects known `strings`, in the case of Base64 strings it tries to decode them
+- try to identify the `family` you belong to
+- prepare URLs for online `sandbox`
+
+### output
 
 ```bash
 {
@@ -80,12 +135,19 @@ $ python3 artifacts.py aggiornamento.apk
 }
 ```
 
-## similarity
+## Similarity
 
 ```bash
-$ python3 artifacts.py aggiornamento.apk --similarity
+python3 artifacts.py aggiornamento.apk --similarity
 ```
-## output
+
+Required parameter: `--similarity` or `-s`
+
+Use the [Jaccard coefficient](https://en.wikipedia.org/wiki/Jaccard_index) to measure the percentage of similarity between the analyzed sample and the already known samples present in the dataset.
+
+The information compared concerns: `permission`, `application` and `intent`
+
+### output
 
 ```bash
 +-----------------------+------------+-------------+--------+-------+
@@ -121,12 +183,17 @@ $ python3 artifacts.py aggiornamento.apk --similarity
 +-----------------------+------------+-------------+--------+-------+
 ```
 
-## report
+## Report
 
 ```bash
-$ python3 artifacts.py aggiornamento.apk --report
+python3 artifacts.py aggiornamento.apk --report
 ```
-## output
+
+Required parameter: `--report` or `-r`
+
+Organizes permissions by category and describes what each permission means.
+
+### output
 
 ```bash
 {
