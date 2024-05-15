@@ -33,7 +33,11 @@ def extractAPK(apkfile, folder):
 	
 def md5APK(apkfile):
 	with open(apkfile, 'rb') as f:
-		file_hash = hashlib.md5()
+		file_hash_md5 = hashlib.md5()
+		file_hash_sha1 = hashlib.sha1()
+		file_hash_sha256 = hashlib.sha256()
 		while chunk := f.read(8192):
-			file_hash.update(chunk)
-	return file_hash.hexdigest()
+			file_hash_md5.update(chunk)
+			file_hash_sha1.update(chunk)
+			file_hash_sha256.update(chunk)
+	return(file_hash_md5.hexdigest(), file_hash_sha1.hexdigest(), file_hash_sha256.hexdigest())
