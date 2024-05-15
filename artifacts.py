@@ -93,8 +93,9 @@ def main():
 	# extract file in folder
 	apk_file.extractAPK(apkfile, folder)
 	
-	# hash md5
-	md5 = apk_file.md5APK(apkfile)
+	# hash
+	md5, sha1, sha256 = apk_file.md5APK(apkfile)
+
 
 	# permission + application + intent
 	# {"permission": [], "application": [], "intent": []}
@@ -134,13 +135,15 @@ def main():
 	result.update({
 		"version": __version__,
 		"md5": md5,
+		"sha1": sha1,
+		"sha256": sha256,
 		"dex": search_file.extension_sort(folder, '.dex'),		# search .dex file in folder
 		"library": search_file.extension_sort(folder, '.so'),	# search .so file in folder
 		"network": match_network.get(folder),
 		"root": match_root.info(folder),
 		"string": match_strings.get(folder),
 		"family": family,
-		"sandbox": sandbox.url(md5)
+		"sandbox": sandbox.url(sha256)
 		})
 	
 	elapsed_time = time.time() - time_start
