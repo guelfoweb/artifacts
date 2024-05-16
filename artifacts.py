@@ -10,8 +10,9 @@ from lib import match_strings, match_regex, match_network, match_root
 from lib import sandbox, similarity, report
 from litejdb import LiteJDB
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
+# 1.1.1 fixed Joesanbox url, updated strings to match and added koodous sandbox
 # 1.1.0 removed 'activity' and 'report' from json, now they are used separately
 # 1.0.9 fix ZeroDivisionError in similarity
 # 1.0.8 added LiteJDB support to 'add', 'del' and 'list'

@@ -7,7 +7,7 @@ def get(folder):
 		#"encrypt": "RC4|AES|DES|DESX|3DES|RSA|DSA|ECDSA|IDEA|Blowfish|Twofish|ElGamal|Diffie-Hellman",
 		"base64": "([A-Za-z0-9+/]{6,}={1,2}|[A-Za-z0-9+/]{6,})",
 		"telegram_id": "[^0-9](100[0-9]{10})[^0-9]",
-		"known": "hakon|standby|LoaderGGPlay|AmexTroll|have been Encrypted|killbot|main_wang|vnc_open|keylog_active|sentSMS|jsdkfh|ping",
+		"known": "strapp_url|hakon|standby|LoaderGGPlay|AmexTroll|have been Encrypted|killbot|main_wang|vnc_open|keylog_active|sentSMS|jsdkfh|ping",
 		}
 
 	exclude = []
