@@ -5,10 +5,15 @@ from . import match_regex
 def info(folder):
 	if not search_file.filename(folder, 'AndroidManifest.xml'):
 		return {}
-	
+
+	# when AndroidManifest.xml exists but it is a folder
+	manifest_path = os.path.join(folder, 'AndroidManifest.xml')
+	if not os.path.isfile(manifest_path):
+		return {}
+
 	regex = {
 		"permission": "android.permission.[A-Z_]*",
-		"application": "com\.[A-Za-z0-9.]*"
+		"application": r"com\.[A-Za-z0-9.]*"
 		}
 
 	result = {}

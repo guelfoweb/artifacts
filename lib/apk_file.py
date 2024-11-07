@@ -1,5 +1,6 @@
 import hashlib
 import zipfile
+import os
 
 """
 def createTempDir():
@@ -19,17 +20,31 @@ def validateAPK(apkfile):
 			return False
 		return True
 
+
 def extractAPK(apkfile, folder):
-	with zipfile.ZipFile(apkfile, 'r') as zip_ref:
-		try:
-			zip_ref.extractall(folder)
-		except: # OSError: [Errno 36] File name too long
-			for name in zip_ref.namelist():
-				try:
-					zip_ref.extractall(name, folder)
-				except: #zipfile.BadZipFile as e:
-					#print ("Zip error:", name)
-					pass
+    with zipfile.ZipFile(apkfile, 'r') as zip_ref:
+        try:
+            zip_ref.extractall(folder)
+        except OSError as e:
+            print(f"OSError: {e}")
+            for name in zip_ref.namelist():
+                target_path = os.path.join(folder, name)
+                
+                # Check if a file or directory with the same name already exists
+                if os.path.exists(target_path):
+                    # If it's a directory, rename it
+                    if os.path.isdir(target_path):
+                        new_target_path = target_path + "_folder"
+                        os.rename(target_path, new_target_path)
+                        print(f"Renamed folder '{target_path}' to '{new_target_path}'")
+
+                try:
+                    # Extract individual file
+                    zip_ref.extract(name, folder)
+                except zipfile.BadZipFile as e:
+                    print(f"Zip error for {name}: {e}")
+                except OSError as e:
+                    print(f"OSError for {name}: {e}")
 	
 def md5APK(apkfile):
 	with open(apkfile, 'rb') as f:
