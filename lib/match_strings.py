@@ -1,47 +1,46 @@
-from . import match_regex
 import base64
 import re
+from . import match_regex
 
 def get(folder):
-	regex = {
-		#"encrypt": "RC4|AES|DES|DESX|3DES|RSA|DSA|ECDSA|IDEA|Blowfish|Twofish|ElGamal|Diffie-Hellman",
-		"base64": "([A-Za-z0-9+/]{6,}={1,2}|[A-Za-z0-9+/]{6,})",
-		"telegram_id": "[^0-9](100[0-9]{10})[^0-9]",
-		"known": "strapp_url|hakon|standby|LoaderGGPlay|AmexTroll|have been Encrypted|killbot|main_wang|vnc_open|keylog_active|sentSMS|jsdkfh|ping",
-		}
+    regex = {
+        "base64": r"([A-Za-z0-9+/]{6,}={1,2}|[A-Za-z0-9+/]{6,})",
+        "telegram_id": r"[^0-9](100[0-9]{10})[^0-9]",
+        "known": r"strapp_url|hakon|standby|LoaderGGPlay|AmexTroll|have been Encrypted|killbot|main_wang|vnc_open|keylog_active|sentSMS|jsdkfh|ping"
+    }
 
-	exclude = []
+    exclude = ["endsWith", "Visually"]  # known false positives
+    result = {}
 
-	result = {}
-	for item in regex.keys():
-		string_list = match_regex.inFolder(folder, regex[item], exclude)
+    # Compile regex patterns for efficiency
+    compiled_regex = {key: re.compile(pattern) for key, pattern in regex.items()}
 
-		if item == "base64":
-			valid_base64 = []
-			exclude = ["endsWith", "Visually"] # known false positives
-			for string in string_list:
-				# is odd
-				if not (len(string) % 2) == 0:
-					continue
+    # Process each regex category
+    for category, pattern in compiled_regex.items():
+        string_list = match_regex.inFolder(folder, pattern.pattern, exclude)
 
-				# ok, it is even!
-				
-				# validate base64: UPPER, lower
-				if string not in exclude \
-					and any(char.isupper() for char in string) \
-					and any(char.islower() for char in string):
-					
-					try:
-						message = base64.b64decode(string).decode('ascii')
-						# checks if decoded base64 sting matches the regex
-						if None in [re.match("[A-Za-z0-9}{)(-+/.=]", i) for i in message]:
-							continue
-					except:
-						continue
+        if category == "base64":
+            valid_base64 = []
 
-					valid_base64.append((string, message))
-			string_list = valid_base64
-		
-		result.update({item: string_list})
+            # Process base64 strings
+            for string in string_list:
+                # Skip strings with odd length
+                if len(string) % 2 != 0:
+                    continue
 
-	return result
+                # Validate base64 format
+                if string not in exclude and any(char.isupper() for char in string) and any(char.islower() for char in string):
+                    try:
+                        decoded_message = base64.b64decode(string).decode('ascii')
+                        # Check if decoded message matches allowed characters
+                        if all(re.match(r"[A-Za-z0-9}{)(-+/.=]", char) for char in decoded_message):
+                            valid_base64.append((string, decoded_message))
+                    except (base64.binascii.Error, UnicodeDecodeError):
+                        # Skip invalid base64 strings
+                        continue
+
+            string_list = valid_base64
+        
+        result[category] = string_list
+
+    return result

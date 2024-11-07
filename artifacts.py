@@ -4,165 +4,144 @@ import json
 import time
 import shutil
 import argparse
-
 from lib import apk_file, json_file, search_file, intent, manifest
 from lib import match_strings, match_regex, match_network, match_root
 from lib import sandbox, similarity, report
 from litejdb import LiteJDB
 
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
-# 1.1.2 fixed Resolved conflict during extraction by renaming directories with names matching existing files
-# 1.1.1 fixed Joesanbox url, updated strings to match and added koodous sandbox
-# 1.1.0 removed 'activity' and 'report' from json, now they are used separately
-# 1.0.9 fix ZeroDivisionError in similarity
-# 1.0.8 added LiteJDB support to 'add', 'del' and 'list'
-# 1.0.7 added similarity table with prettytable dependency
-# 1.0.6 fixed jaccard similarity coefficient and added updatedb
-# 1.0.5 checks if decoded base64 string matches the regex
-# 1.0.4 decodes base64 strings
-# 1.0.3 fixed permission non found in result["activity"]["permission"]
-# 1.0.2 fixed extractAPK file name too long
-# 1.0.1 added details to family
+# 1.1.3 Fixed: Skip files with unsupported compression methods during extraction
+# 1.1.2 Fixed: Resolved conflict during extraction by renaming directories with names matching existing files
+# 1.1.1 Fixed: Joesanbox url, updated strings to match and added koodous sandbox
+# 1.1.0 Removed: 'activity' and 'report' from json, now they are used separately
+# 1.0.9 Fixed: ZeroDivisionError in similarity
+# 1.0.8 Added: LiteJDB support to 'add', 'del' and 'list'
+# 1.0.7 Added: Similarity table with prettytable dependency
+# 1.0.6 Fixed: jaccard similarity coefficient and added updatedb
+# 1.0.5 Added: Checks if decoded base64 string matches the regex
+# 1.0.4 Added: Decodes base64 strings
+# 1.0.3 Fixed: Permission non found in result["activity"]["permission"]
+# 1.0.2 Fixed: extractAPK file name too long
+# 1.0.1 Added: details to family
 # 1.0.0 start project
 
-# load json database
+# Load json database
 def load_db():
-	filename = 'data' + os.sep + 'patterns.json'
-	db = LiteJDB(filename)
-	db.load()
-	return db
+    filename = os.path.join('data', 'patterns.json')
+    db = LiteJDB(filename)
+    db.load()
+    return db
 
-# LiteJDB delete
-def delete_family(name):
-	query = "name == '{name}'".format(name=name)
-	ids = db.query(query, "get_id")
-	if ids:	# [1]
-		for id in ids:
-			db.delete(id)
-	db.save()
+# Delete family from LiteJDB
+def delete_family(name, db):
+    ids = db.query(f"name == '{name}'", "get_id")
+    for id in ids:
+        db.delete(id)
+    db.save()
 
-def add_family(name, activity):
-	query = "name == '{name}'".format(name=name)
-	exists = db.query(query, "get_id")
-	if not exists:
-		db.add({'name': name, 'permission': activity['permission'], 'application': activity['application'], 'intent': activity['intent']})
-		db.save()
-	else:
-		print (name, 'already exists at', exists)
+# Add family to LiteJDB
+def add_family(name, activity, db):
+    if not db.query(f"name == '{name}'", "get_id"):
+        db.add({
+            'name': name,
+            'permission': activity['permission'],
+            'application': activity['application'],
+            'intent': activity['intent']
+        })
+        db.save()
+    else:
+        print(f"{name} already exists")
 
-def list_families():
-	for index, row in db.df().iterrows():
-		print (row['name'])
+# List families in LiteJDB
+def list_families(db):
+    for index, row in db.df().iterrows():
+        print(row['name'])
 
+# Main function for APK analysis
 def main():
-	global db
-	db = load_db()
+    db = load_db()
+    parser = argparse.ArgumentParser(prog="artifacts", description="apk analysis")
 
-	parser = argparse.ArgumentParser(prog="artifacts", description="apk analysis")
+    # Command-line arguments
+    parser.add_argument("apkfile", nargs='?', help="apk to analyze")
+    parser.add_argument("-v", "--version", action="version", version="%(prog)s " + __version__)
+    parser.add_argument("-r", "--report", help="add report to json result", action="store_true")
+    parser.add_argument("-s", "--similarity", help="shows the similarities", action="store_true")
+    parser.add_argument("-a", "--activity", help="shows the activities", action="store_true")
+    parser.add_argument("-l", "--list-all", help="Lists all families in the db", action="store_true")
+    parser.add_argument("--del", help="Delete a family from db", dest="family_to_del")
+    parser.add_argument("--add", help="Add a new family to db", dest="family_to_add")
+    args = parser.parse_args()
 
-	# args
-	parser.add_argument("apkfile", nargs='?', help="apk to analyze")
-	parser.add_argument("-v", "--version", action="version", version="%(prog)s " + __version__)
-	parser.add_argument("-r", "--report", help="add report to json result", action="store_true", required=False)
-	parser.add_argument("-s", "--similarity", help="shows the similarities", action="store_true", required=False)
-	parser.add_argument("-a", "--activity", help="shows the activities", action="store_true", required=False)
-	parser.add_argument("-l", "--list-all", help="Lists all families in the db", action="store_true", required=False)
-	parser.add_argument("--del", help="Delete a family from db", dest="family_to_del", required=False)
-	parser.add_argument("--add", help="Add a new family to db", dest="family_to_add", required=False)
-	args = parser.parse_args()
+    apkfile = args.apkfile
 
-	apkfile = args.apkfile
+    # Handle --del, --list-all, or --add arguments without apkfile
+    if not apkfile:
+        if args.family_to_del:
+            delete_family(args.family_to_del, db)
+        elif args.list_all:
+            list_families(db)
+        else:
+            parser.print_help()
+        sys.exit()
 
-	# check if the domain name is correct
-	if not apkfile or not os.path.isfile(apkfile) or not apk_file.validateAPK(apkfile):
-		# LiteJDB delete
-		if args.family_to_del:
-			name = args.family_to_del
-			delete_family(name)
-		# LiteJDB list
-		elif args.list_all:
-			list_families()
-		else:
-			parser.print_help(sys.stderr)
-		sys.exit()
+    folder = os.path.basename(apkfile + "_tmp")
+    os.makedirs(folder, exist_ok=True)
+    time_start = time.time()
 
-	global folder
-	folder = os.path.basename(apkfile+"_tmp")
-	
-	time_start = time.time()
-	
-	# extract file in folder
-	apk_file.extractAPK(apkfile, folder)
-	
-	# hash md5
-	md5 = apk_file.md5APK(apkfile)
+    try:
+        # Extract APK and start analysis
+        apk_file.extractAPK(apkfile, folder)
+        md5 = apk_file.md5APK(apkfile)
+        activity = manifest.info(folder)
+        activity.update(intent.info(folder))
 
-	# permission + application + intent
-	# {"permission": [], "application": [], "intent": []}
-	activity = manifest.info(folder)
-	activity.update(intent.info(folder))
+        # Handle individual arguments
+        if args.activity:
+            print(json.dumps(activity, indent=4))
+            return
 
-	if args.activity:
-		print (json.dumps(activity, indent=4))
-		shutil.rmtree(folder)
-		sys.exit(0)
+        if args.report:
+            print(json.dumps(report.get(activity), indent=4))
+            return
 
-	if args.report:
-		print (json.dumps(report.get(activity), indent=4))
-		shutil.rmtree(folder)
-		sys.exit(0)
+        if args.family_to_add:
+            add_family(args.family_to_add, activity, db)
+            return
 
-	# LiteJDB add
-	if args.family_to_add:
-		name = args.family_to_add
-		add_family(name, activity)
-		shutil.rmtree(folder)
-		sys.exit(0)
+        # Find family similarities if requested
+        family = []
+        if "permission" in activity:
+            all_families = args.similarity
+            family = similarity.get(activity, all_families, db.df())
 
-	family = []
-	if "permission" in activity.keys():
-		all_families = True if args.similarity else False
-		family = similarity.get(activity, all_families, db.df())
+        if args.similarity:
+            print(family)
+            return
 
-	if args.similarity:
-		print (family)
-		shutil.rmtree(folder)
-		sys.exit(0)
+        # Compile result data
+        result = {
+            "version": __version__,
+            "md5": md5,
+            "dex": search_file.extension_sort(folder, '.dex'),
+            "library": search_file.extension_sort(folder, '.so'),
+            "network": match_network.get(folder),
+            "root": match_root.info(folder),
+            "string": match_strings.get(folder),
+            "family": family,
+            "sandbox": sandbox.url(md5),
+            "elapsed_time": round(time.time() - time_start, 2)
+        }
+        print(json.dumps(result, indent=4))
 
-	result = {}
-
-	# start analysis
-	result.update({
-		"version": __version__,
-		"md5": md5,
-		"dex": search_file.extension_sort(folder, '.dex'),		# search .dex file in folder
-		"library": search_file.extension_sort(folder, '.so'),	# search .so file in folder
-		"network": match_network.get(folder),
-		"root": match_root.info(folder),
-		"string": match_strings.get(folder),
-		"family": family,
-		"sandbox": sandbox.url(md5)
-		})
-	
-	elapsed_time = time.time() - time_start
-
-	# add report and elapsed_time
-	result.update({
-		"elapsed_time": round(elapsed_time, 2)
-		})
-
-	shutil.rmtree(folder)
-	print (json.dumps(result, indent=4))
+    finally:
+        shutil.rmtree(folder)
 
 if __name__ == "__main__":
-	try:
-		main()
-	except KeyboardInterrupt:
-		print("\nInterrupted")
-		# remove folder (global variable)
-		shutil.rmtree(folder)
-		try:
-			sys.exit(0)
-		except SystemExit:
-			os._exit(0)
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nInterrupted")
+        shutil.rmtree(folder, ignore_errors=True)
+        sys.exit(0)

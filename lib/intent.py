@@ -1,21 +1,19 @@
 from . import match_regex
 
 def info(folder):
-	# https://developer.android.com/guide/components/intents-filters
-	regex = {
-		"intent": "[A-Za-z]*\.intent\.[A-Za-z]*\.[A-Za-z0-9.]*",
-		"intent_extra": "[^\.](intent\.[A-Za-z]*\.[A-Za-z0-9.]*)",
-		}
+    """Extracts intent information from files in the specified folder."""
+    # https://developer.android.com/guide/components/intents-filters
+    regex = {
+        "intent": r"[A-Za-z]*\.intent\.[A-Za-z]*\.[A-Za-z0-9.]*",
+        "intent_extra": r"[^\.](intent\.[A-Za-z]*\.[A-Za-z0-9.]*)",
+    }
+    exclude = []
 
-	exclude = []
+    # Gather and sort results
+    intent_matches = match_regex.inFolder(folder, regex["intent"], exclude)
+    intent_extra_matches = match_regex.inFolder(folder, regex["intent_extra"], exclude)
+    result = {"intent": sorted(intent_matches + intent_extra_matches)}
 
-	result = {}
-	for item in regex.keys():
-		result.update({item: match_regex.inFolder(folder, regex[item], exclude)})
-
-	result["intent"] = sorted(result["intent"]) + sorted(result["intent_extra"])
-	del result["intent_extra"]
-
-	return result
+    return result
 
 

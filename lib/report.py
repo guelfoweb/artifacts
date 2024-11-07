@@ -2,31 +2,38 @@ import os
 from . import json_file
 
 def get(activity):
-	# https://gist.github.com/Watsonboy1989/fa01a6869d82062c770e137107693744
-	permission_categories = json_file.load_json("permission_categories.json")
-	# https://developer.android.com/reference/android/Manifest.permission
-	permission_description = json_file.load_json("permission_description.json")
-	
-	categories = {}
-	not_category = []
+    # Load permission categories and descriptions
+    permission_categories = json_file.load_json("permission_categories.json")
+    permission_description = json_file.load_json("permission_description.json")
 
-	if not "permission" in activity:
-		print ("permission not found")
-		return categories
+    categories = {}
+    not_category = []
 
-	permission_list = [item.split('.')[-1] for item in activity["permission"]]
-	for k in permission_list:
-		for key in permission_categories.keys():
-			if k in permission_categories[key]:
-				desc = ""
-				if k in permission_description:
-					desc = permission_description[k]
-				
-				if key not in categories.keys():
-					categories.update({key: [(k, desc)]})
-				else:
-					categories[key].append((k, desc))
-			else:
-				not_category.append(k)
+    # Check if "permission" is in the activity
+    permissions = activity.get("permission")
+    if not permissions:
+        print("Permission not found")
+        return categories
 
-	return categories
+    # Process the permission list
+    permission_list = [item.split('.')[-1] for item in permissions]
+
+    # Categorize the permissions
+    for perm in permission_list:
+        # Try to find the permission in the categories
+        matched = False
+        for category, perm_list in permission_categories.items():
+            if perm in perm_list:
+                # Get the description for the permission if available
+                desc = permission_description.get(perm, "")
+                
+                # Add the permission to the respective category
+                categories.setdefault(category, []).append((perm, desc))
+                matched = True
+                break
+        
+        # If permission doesn't match any category, add to not_category list
+        if not matched:
+            not_category.append(perm)
+
+    return categories

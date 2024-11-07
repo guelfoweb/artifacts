@@ -3,69 +3,69 @@ from . import json_file
 from prettytable import PrettyTable
 
 def jaccard_similarity(set1, set2):
-	# intersection of two sets
-	intersection = len(set1.intersection(set2))
-	# Unions of two sets
-	union = len(set1.union(set2))
-	
-	# ZeroDivisionError: division by zero
-	if union == 0:
-		return 0
-
-	return intersection / union
+    # Calculate the Jaccard similarity between two sets
+    intersection = len(set1.intersection(set2))
+    union = len(set1.union(set2))
+    
+    return 0 if union == 0 else intersection / union
 
 def dataset(lista):
-	# return set of data
-	return set([p.split('.')[-1] for p in lista])
+    # Return a set of data extracted from file extensions
+    return {p.split('.')[-1] for p in lista}
 
 def get(set_a, all_families, patterns):
-	# reference list
-	p = dataset(set_a["permission"])
-	a = dataset(set_a["application"])
-	i = dataset(set_a["intent"])
+    # Get Jaccard similarity statistics for the given patterns and sets
+    p = dataset(set_a["permission"])
+    a = dataset(set_a["application"])
+    i = dataset(set_a["intent"])
 
-	stats  = {}
-	values = {}
-	
-	for index, row in patterns.iterrows():
-		# database json_data
-		p1 = dataset(row["permission"])
-		a1 = dataset(row["application"])
-		i1 = dataset(row["intent"])
+    stats = {}
+    values = {}
 
-		family = row["name"]
+    for _, row in patterns.iterrows():
+        # Extract data for comparison
+        p1 = dataset(row["permission"])
+        a1 = dataset(row["application"])
+        i1 = dataset(row["intent"])
 
-		# jaccard similarity of two sets
-		permission  = jaccard_similarity(p, p1) * 100
-		application = jaccard_similarity(a, a1) * 100
-		intent      = jaccard_similarity(i, i1) * 100
+        family = row["name"]
 
-		# collect all values
-		values.update({family: {"permission": round(permission, 2), "application": round(application, 2), "intent": round(intent, 2)}})
+        # Calculate Jaccard similarities
+        permission = jaccard_similarity(p, p1) * 100
+        application = jaccard_similarity(a, a1) * 100
+        intent = jaccard_similarity(i, i1) * 100
 
-		similarity = permission + application + intent
-		similarity = round(similarity/3, 2)
-		
-		stats.update({family: similarity})
+        # Store calculated values
+        values[family] = {
+            "permission": round(permission, 2),
+            "application": round(application, 2),
+            "intent": round(intent, 2)
+        }
 
-	# sort stats keys
-	stats = sorted(stats.items(), key=lambda x:x[1], reverse=True)
-	
-	if all_families:
-		headers = ['family', 'permission', 'application', 'intent', 'total']
-		myTable = PrettyTable(headers)
-		for item in stats:
-			family = item[0]
-			total = item[1]
-			permission = values[family]['permission']
-			application = values[family]['application']
-			intent = values[family]['intent']
-			myTable.add_row([family, permission, application, intent, total])
-		return myTable
-	
-	family_name  = list(stats)[0][0]
-	family_match = list(stats)[0][1]
+        # Calculate overall similarity score
+        similarity = round((permission + application + intent) / 3, 2)
+        stats[family] = similarity
 
-	match = {"name": family_name, "match": family_match, "value": values[family_name]}
+    # Sort families by similarity score in descending order
+    sorted_stats = sorted(stats.items(), key=lambda x: x[1], reverse=True)
 
-	return match
+    if all_families:
+        # Display all families with their statistics in a table
+        headers = ['family', 'permission', 'application', 'intent', 'total']
+        table = PrettyTable(headers)
+        for family, total in sorted_stats:
+            permission = values[family]['permission']
+            application = values[family]['application']
+            intent = values[family]['intent']
+            table.add_row([family, permission, application, intent, total])
+        return table
+
+    # Return the family with the best match
+    best_family = sorted_stats[0][0]
+    match = {
+        "name": best_family,
+        "match": sorted_stats[0][1],
+        "value": values[best_family]
+    }
+    
+    return match

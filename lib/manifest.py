@@ -4,6 +4,7 @@ from . import match_regex
 
 def info(folder):
 	if not search_file.filename(folder, 'AndroidManifest.xml'):
+		print ("NO MANIFEST")
 		return {}
 
 	# when AndroidManifest.xml exists but it is a folder
