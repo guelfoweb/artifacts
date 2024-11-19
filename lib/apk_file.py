@@ -30,12 +30,24 @@ def extractAPK(apkfile, folder):
                 # Attempt to extract individual file
                 zip_ref.extract(name, folder)
             except zipfile.BadZipFile as e:
+                # This exception is raised when the ZIP file is corrupt or not a valid ZIP archive.
                 print(f"Zip error for {name}: {e}")
             except NotImplementedError as e:
+                # Raised when the ZIP file uses a compression method not supported by `zipfile`
                 print(f"Skipping {name}: {e}")
+            except RecursionError as e:
+                # This occurs if there is infinite recursion during path resolution or directory creation,
+                # likely caused by malformed ZIP entries or logical errors in handling paths.
+                print(f"Skipping {name}: {e}")
+            except NotADirectoryError as e:
+                # Raised when trying to perform an operation on a directory, but a file is expected (or vice versa).
+                # This can happen if the extracted file structure conflicts with existing files or directories.
+                print(f"Not A Directory Error {name}: {e}")
             except OSError as e:
+                # This is a broad exception for file system-related errors, such as permission issues,
+                # path length limits, or invalid file names.
                 print(f"OSError for {name}: {e}")
-    
+        
 def md5APK(apkfile):
     with open(apkfile, 'rb') as f:
         file_hash = hashlib.md5()
