@@ -1,16 +1,20 @@
 import os
+from . import apk_file
 
-def extension(folder, ext):
-    """Recursively search for files with the specified extension."""
-    return [os.path.join(dp, f) for dp, dn, filenames in os.walk(folder) for f in filenames if os.path.splitext(f)[1] == ext]
+def extension(filepaths, ext):
+    """Filter files with the specified extension from a list of filepaths."""
+    return [fp.replace('_tmp','') for fp in filepaths if os.path.splitext(fp)[1] == ext]
 
-def filename(folder, file):
-    """Recursively search for files with the specified filename (without extension)."""
-    return [os.path.join(dp, f) for dp, dn, filenames in os.walk(folder) for f in filenames if os.path.splitext(f)[0] in file]
+def filename(filepaths, file):
+    """Filter files with the specified filename from a list of filepaths."""
+    return [fp for fp in filepaths if os.path.basename(fp) in file]
 
-# return sorted list
-def extension_sort(folder, ext):
-    """Return a sorted list of files with the specified extension, relative to the folder."""
-    files = extension(folder, ext)
+def extension_sort(filepaths, ext):
+    """Return a sorted list of files with the specified extension from a list of filepaths."""
+    files = extension(filepaths, ext)
     files.sort()
-    return [os.path.relpath(f, start=folder) for f in files]
+    return files
+
+def search_archive(filepaths):
+    """Return list of archives (ZIP, APK, etc.)"""
+    return [filepath.replace('_tmp','') for filepath in filepaths if apk_file.validateAPK(filepath)]

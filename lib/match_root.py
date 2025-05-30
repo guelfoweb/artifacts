@@ -1,6 +1,6 @@
 from . import match_regex
 
-def info(folder):
+def info(filepaths):
 	"""Search for root-related paths in the specified folder."""
 	regex = {
 		"root": r"/sbin/|/system/bin/|/system/xbin/|/system/sd/xbin/|/system/bin/failsafe/|/data/local/xbin/|/data/local/bin/|/data/local/",
@@ -8,6 +8,6 @@ def info(folder):
 	
 	exclude = []
 
-	return match_regex.inFolder(folder, regex["root"], exclude)
+	return match_regex.inFolder(filepaths, regex["root"], exclude)
 
 

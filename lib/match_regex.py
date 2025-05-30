@@ -24,18 +24,11 @@ def inFile(file, regex):
     
     return result
 
-def inFolder(folder, regex, exclude=False):
-    """Searches for regex matches in all files of a folder recursively."""
-    exclude_extensions = re.compile(r'\.(ttf|png|SF|MF|dylib|jar|otf)$')
-    garbage = {'publicsuffixes.gz', 'plus.log', 'internal.log'}
-    
-    result = set()
-    filepaths = [
-        os.path.join(dp, f) for dp, _, filenames in os.walk(folder) 
-        for f in filenames if not exclude_extensions.search(f) and '.' in f
-    ]
-    
+def inFolder(filepaths, regex, exclude=False):    
     # Concurrent execution
+    result = set()
+    garbage = {'publicsuffixes.gz', 'plus.log', 'internal.log'}
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=25) as executor:
         futures = {executor.submit(inFile, filepath, regex) for filepath in filepaths}
 

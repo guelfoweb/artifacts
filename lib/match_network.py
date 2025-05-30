@@ -2,7 +2,7 @@ import re
 import ipaddress
 from . import match_regex
 
-def get(folder):
+def get(filepaths):
     regex = {
         "ip": r"[^A-Za-z0-9\.]([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})[^A-Za-z0-9\.]",
         "url": r"[A-Za-z]+://[a-zA-Z0-9./?=_%:-]*",
@@ -18,7 +18,7 @@ def get(folder):
         "gstatic.com", "googlesource.com"
     ]
 
-    result = {key: match_regex.inFolder(folder, pattern, exclude) for key, pattern in regex.items()}
+    result = {key: match_regex.inFolder(filepaths, pattern, exclude) for key, pattern in regex.items()}
 
     # Validate and clean URLs
     if result["url"]:

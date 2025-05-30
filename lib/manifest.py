@@ -2,26 +2,31 @@ import os
 from . import search_file
 from . import match_regex
 
-def info(folder):
-	if not search_file.filename(folder, 'AndroidManifest.xml'):
-		print ("NO MANIFEST")
-		return {}
+def info(filepaths):
+    result = {}
 
-	# when AndroidManifest.xml exists but it is a folder
-	manifest_path = os.path.join(folder, 'AndroidManifest.xml')
-	if not os.path.isfile(manifest_path):
-		return {}
-
-	regex = {
-		"permission": "android.permission.[A-Z_]*",
-		"application": r"com\.[A-Za-z0-9.]*"
-		}
-
-	result = {}
-
-	# get permission and application
-	for item in regex.keys():
-		match = match_regex.inFile(os.path.join(folder, 'AndroidManifest.xml'), regex[item])
-		result.update({item: sorted(match)})
-
-	return result
+    # Check AndroidManifest.xml in filepaths
+    manifest_files = search_file.filename(filepaths, ['AndroidManifest.xml'])
+    
+    if not manifest_files:
+        #print("NO MANIFEST")
+        return result
+    
+    # Get first AndroidManifest.xml
+    manifest_path = manifest_files[0]
+    
+    # Check that it is a file
+    if not os.path.isfile(manifest_path):
+        return result
+    
+    regex = {
+        "permission": "android.permission.[A-Z_]*",
+        "application": r"com\.[A-Za-z0-9.]*"
+    }
+    
+    # get permissions and applications
+    for item in regex.keys():
+        match = match_regex.inFile(manifest_path, regex[item])
+        result.update({item: sorted(match)})
+    
+    return result

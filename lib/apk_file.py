@@ -2,6 +2,7 @@ import os
 import hashlib
 import zipfile
 import shutil
+from . import fix_compression
 
 def validateAPK(apkfile):
     # first 4 bytes APK, JAR (ZIP, XLSM): 
@@ -13,8 +14,15 @@ def validateAPK(apkfile):
             return False
         return True
 
-
 def extractAPK(apkfile, folder):
+
+    fixer = fix_compression.ZipHeaderFixer(apkfile, verbose=True)
+    result = fixer.check_and_fix()
+
+    if result == 'fixed':
+        base, ext = os.path.splitext(apkfile)
+        apkfile = f"{base}_fixed{ext}"
+
 
     if zipfile.is_zipfile(apkfile):
         with zipfile.ZipFile(apkfile, 'r') as zip_ref:

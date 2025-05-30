@@ -4,13 +4,14 @@ import json
 import time
 import shutil
 import argparse
-from lib import apk_file, json_file, search_file, intent, manifest
-from lib import match_strings, match_regex, match_network, match_root
+from lib import apk_file, file_list, json_file, search_file, intent, manifest
+from lib import match_strings, match_network, match_root
 from lib import sandbox, similarity, report
 from litejdb import LiteJDB
 
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
+# 1.1.4 Added: Zip Header Fixer and Archive detect
 # 1.1.3 Fixed: Skip files with unsupported compression methods during extraction
 # 1.1.2 Fixed: Resolved conflict during extraction by renaming directories with names matching existing files
 # 1.1.1 Fixed: Joesanbox url, updated strings to match and added koodous sandbox
@@ -94,8 +95,10 @@ def main():
         # Extract APK and start analysis
         apk_file.extractAPK(apkfile, folder)
         md5 = apk_file.md5APK(apkfile)
-        activity = manifest.info(folder)
-        activity.update(intent.info(folder))
+        filepaths = file_list.get(folder)
+        activity = manifest.info(filepaths)
+        activity.update(intent.info(filepaths))
+        archives = search_file.search_archive(filepaths)
 
         # Handle individual arguments
         if args.activity:
@@ -124,11 +127,12 @@ def main():
         result = {
             "version": __version__,
             "md5": md5,
-            "dex": search_file.extension_sort(folder, '.dex'),
-            "library": search_file.extension_sort(folder, '.so'),
-            "network": match_network.get(folder),
-            "root": match_root.info(folder),
-            "string": match_strings.get(folder),
+            "dex": search_file.extension_sort(filepaths, '.dex'),
+            "library": search_file.extension_sort(filepaths, '.so'),
+            "archive": archives,
+            "network": match_network.get(filepaths),
+            "root": match_root.info(filepaths),
+            "string": match_strings.get(filepaths),
             "family": family,
             "sandbox": sandbox.url(md5),
             "elapsed_time": round(time.time() - time_start, 2)

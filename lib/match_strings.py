@@ -2,7 +2,7 @@ import base64
 import re
 from . import match_regex
 
-def get(folder):
+def get(filepaths):
     regex = {
         "base64": r"([A-Za-z0-9+/]{6,}={1,2}|[A-Za-z0-9+/]{6,})",
         "telegram_id": r"[^0-9](100[0-9]{10})[^0-9]",
@@ -17,7 +17,7 @@ def get(folder):
 
     # Process each regex category
     for category, pattern in compiled_regex.items():
-        string_list = match_regex.inFolder(folder, pattern.pattern, exclude)
+        string_list = match_regex.inFolder(filepaths, pattern.pattern, exclude)
 
         if category == "base64":
             valid_base64 = []

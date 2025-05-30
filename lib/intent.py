@@ -1,6 +1,6 @@
 from . import match_regex
 
-def info(folder):
+def info(filepaths):
     """Extracts intent information from files in the specified folder."""
     # https://developer.android.com/guide/components/intents-filters
     regex = {
@@ -10,8 +10,8 @@ def info(folder):
     exclude = []
 
     # Gather and sort results
-    intent_matches = match_regex.inFolder(folder, regex["intent"], exclude)
-    intent_extra_matches = match_regex.inFolder(folder, regex["intent_extra"], exclude)
+    intent_matches = match_regex.inFolder(filepaths, regex["intent"], exclude)
+    intent_extra_matches = match_regex.inFolder(filepaths, regex["intent_extra"], exclude)
     result = {"intent": sorted(intent_matches + intent_extra_matches)}
 
     return result
