@@ -8,24 +8,9 @@ from lib import apk_file, file_list, json_file, search_file, intent, manifest
 from lib import match_strings, match_network, match_root
 from lib import sandbox, similarity, report
 from litejdb import LiteJDB
+from prettytable import PrettyTable
 
-__version__ = '1.1.4'
-
-# 1.1.4 Added: Zip Header Fixer and Archive detect
-# 1.1.3 Fixed: Skip files with unsupported compression methods during extraction
-# 1.1.2 Fixed: Resolved conflict during extraction by renaming directories with names matching existing files
-# 1.1.1 Fixed: Joesanbox url, updated strings to match and added koodous sandbox
-# 1.1.0 Removed: 'activity' and 'report' from json, now they are used separately
-# 1.0.9 Fixed: ZeroDivisionError in similarity
-# 1.0.8 Added: LiteJDB support to 'add', 'del' and 'list'
-# 1.0.7 Added: Similarity table with prettytable dependency
-# 1.0.6 Fixed: jaccard similarity coefficient and added updatedb
-# 1.0.5 Added: Checks if decoded base64 string matches the regex
-# 1.0.4 Added: Decodes base64 strings
-# 1.0.3 Fixed: Permission non found in result["activity"]["permission"]
-# 1.0.2 Fixed: extractAPK file name too long
-# 1.0.1 Added: details to family
-# 1.0.0 start project
+__version__ = '1.2.0'
 
 # Load json database
 def load_db():
@@ -46,18 +31,53 @@ def add_family(name, activity, db):
     if not db.query(f"name == '{name}'", "get_id"):
         db.add({
             'name': name,
-            'permission': activity['permission'],
-            'application': activity['application'],
-            'intent': activity['intent']
+            'permission': activity.get('permission', []),
+            'application': activity.get('application', []),
+            'intent': activity.get('intent', [])
         })
         db.save()
+        print(f"Family '{name}' added to database.")
     else:
-        print(f"{name} already exists")
+        print(f"Family '{name}' already exists.")
 
 # List families in LiteJDB
 def list_families(db):
-    for index, row in db.df().iterrows():
-        print(row['name'])
+    df = db.df()
+
+    if df.empty:
+        print("No families stored in LiteJDB.")
+        return
+
+    def normalize(values):
+        if not values:
+            return []
+        if isinstance(values, (set, tuple)):
+            values = list(values)
+        if isinstance(values, str):
+            values = [values]
+        return sorted(values, key=str.casefold)
+
+    table = PrettyTable(["Family", "Permission", "Application", "Intent"])
+
+    for _, row in df.sort_values("name").iterrows():
+        counts = []
+        for bucket in ("permission", "application", "intent"):
+            values = normalize(row[bucket] if bucket in row and row[bucket] is not None else [])
+            counts.append(len(values))
+        table.add_row([row["name"], *counts])
+
+    print(table)
+
+def activity_counts(activity):
+    summary = {}
+    for bucket in ("permission", "application", "intent"):
+        values = activity.get(bucket) or []
+        if isinstance(values, (set, tuple)):
+            values = list(values)
+        elif isinstance(values, str):
+            values = [values]
+        summary[bucket] = len({v for v in values})
+    return summary
 
 # Main function for APK analysis
 def main():
@@ -71,6 +91,11 @@ def main():
     parser.add_argument("-s", "--similarity", help="shows the similarities", action="store_true")
     parser.add_argument("-a", "--activity", help="shows the activities", action="store_true")
     parser.add_argument("-l", "--list-all", help="Lists all families in the db", action="store_true")
+    parser.add_argument(
+        "--fast",
+        help="skip regex-heavy IOC extraction (ip/url/base64/telegram/root) for faster analysis",
+        action="store_true"
+    )
     parser.add_argument("--del", help="Delete a family from db", dest="family_to_del")
     parser.add_argument("--add", help="Add a new family to db", dest="family_to_add")
     args = parser.parse_args()
@@ -87,6 +112,12 @@ def main():
             parser.print_help()
         sys.exit()
 
+    if not os.path.exists(apkfile):
+        parser.exit(2, f"Error: APK file not found: {apkfile}\n")
+
+    if not os.path.isfile(apkfile):
+        parser.exit(2, f"Error: Path is not a file: {apkfile}\n")
+
     folder = os.path.basename(apkfile + "_tmp")
     os.makedirs(folder, exist_ok=True)
     time_start = time.time()
@@ -94,9 +125,9 @@ def main():
     try:
         # Extract APK and start analysis
         apk_file.extractAPK(apkfile, folder)
-        md5 = apk_file.md5APK(apkfile)
+        hashes = apk_file.hashAPK(apkfile)
         filepaths = file_list.get(folder)
-        activity = manifest.info(filepaths)
+        activity = manifest.info(apkfile)
         activity.update(intent.info(filepaths))
         archives = search_file.search_archive(filepaths)
 
@@ -124,17 +155,31 @@ def main():
             return
 
         # Compile result data
+        if args.fast:
+            network = {"ip": [], "url": [], "param": []}
+            root = []
+            string = {"base64": [], "telegram_id": [], "known": []}
+        else:
+            network = match_network.get(filepaths)
+            root = match_root.info(filepaths)
+            string = match_strings.get(filepaths)
+
         result = {
             "version": __version__,
-            "md5": md5,
+            "md5": hashes.get("md5"),
+            "sha1": hashes.get("sha1"),
+            "sha256": hashes.get("sha256"),
+            "package_name": activity.get("package_name"),
+            "main_activity": activity.get("main_activity"),
             "dex": search_file.extension_sort(filepaths, '.dex'),
             "library": search_file.extension_sort(filepaths, '.so'),
             "archive": archives,
-            "network": match_network.get(filepaths),
-            "root": match_root.info(filepaths),
-            "string": match_strings.get(filepaths),
+            "network": network,
+            "root": root,
+            "string": string,
+            "activity_counts": activity_counts(activity),
             "family": family,
-            "sandbox": sandbox.url(md5),
+            "sandbox": sandbox.url(hashes.get("md5")),
             "elapsed_time": round(time.time() - time_start, 2)
         }
         print(json.dumps(result, indent=4))

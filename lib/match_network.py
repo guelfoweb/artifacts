@@ -31,10 +31,14 @@ def get(filepaths):
 
     # Validate and clean IP addresses
     if result["ip"]:
-        result["ip"] = [
+        cleaned_ips = [
             ip for ip in result["ip"]
             if not (ip.startswith("0.") or ip.endswith(".0.0"))
             and is_valid_ip(ip)
+        ]
+        result["ip"] = [
+            str(ipaddress.ip_address(ip))
+            for ip in sorted(set(cleaned_ips), key=ipaddress.ip_address)
         ]
 
     # Filter out empty strings in each result list

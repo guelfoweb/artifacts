@@ -2,16 +2,18 @@ import json
 from . import json_file
 from prettytable import PrettyTable
 
-def jaccard_similarity(set1, set2):
-    # Calculate the Jaccard similarity between two sets
+def jaccard_similarity(values1, values2):
+    # Calculate the Jaccard similarity between two iterables
+    set1 = set(values1)
+    set2 = set(values2)
     intersection = len(set1.intersection(set2))
     union = len(set1.union(set2))
     
     return 0 if union == 0 else intersection / union
 
 def dataset(lista):
-    # Return a set of data extracted from file extensions
-    return {p.split('.')[-1] for p in lista}
+    # Return an alphabetically sorted list of unique suffixes
+    return sorted({p.split('.')[-1] for p in lista}, key=str.casefold)
 
 def get(set_a, all_families, patterns):
     # Get Jaccard similarity statistics for the given patterns and sets

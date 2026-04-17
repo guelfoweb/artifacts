@@ -1,2 +1,3 @@
 prettytable==3.9.0
-litejdb @ git+https://github.com/guelfoweb/litejdb.git
+apkInspector @ git+https://github.com/erev0s/apkInspector.git@main
+litejdb @ git+https://github.com/guelfoweb/litejdb.git@main

@@ -1,323 +1,150 @@
 # artifacts
-APK strings analysis
 
-# Important:
-> [!NOTE]
-> - This tool is useful for a first analysis<br>
-> - This tool extracts known strings from the APK
+![Python Version](https://img.shields.io/badge/Python-3.10+-blue.svg?logo=python&logoColor=white)
+![License](https://img.shields.io/badge/License-GPLv3-green.svg)
+![Status](https://img.shields.io/badge/status-active-success)
 
-> [!WARNING] 
-> - This tool can produce false positive results<br>
-> - Always check the results with appropriate tools like `Jadx` or `Bytecode-Viewer`
+**artifacts** is a CLI toolkit for static triage of suspicious APKs. It surfaces known strings, network indicators, manifest permissions/anomalies, and suggests likely malware families by comparing the findings against a LiteJDB dataset. Use it for the very first pass before switching to heavyweight tools such as Jadx, Bytecode-Viewer, or dynamic sandboxes.
 
-# Install
+## Table of Contents
+
+- [Key Features](#key-features)
+- [apkInspector Integration](#apkinspector-integration)
+- [Requirements & Installation](#requirements--installation)
+- [Quick Start](#quick-start)
+- [CLI Commands](#cli-commands)
+- [Datasets & Reporting](#datasets--reporting)
+- [Contributing](#contributing)
+- [Developers](#developers)
+- [License](#license)
+
+## Key Features
+
+- **Robust extraction** – `apkInspector.headers.ZipEntry` lets us unpack obfuscated or tampered APKs directly inside the working temp folder, avoiding the limitations of Python's `zipfile`.
+- **Manifest decoding** – `apkInspector.axml.parse_apk_for_manifest` decodes `AndroidManifest.xml` even when it is still in binary form, so we can read permissions/applicationId, package name, and launcher activity without fully expanding the archive.
+- **String & IOC hunting** – regexes for Base64, URLs/IPs, Telegram IDs, plus curated network/root indicators stored in `data/*.json`.
+- **Similarity scoring** – compares the extracted permission/application sets against the LiteJDB database (`data/patterns.json`) to suggest the closest family match.
+- **Actionable reports** – `-r` builds a structured JSON report, `-s` prints similarity tables, `--activity` dumps the decoded manifest details.
+
+> ℹ️ **Disclaimer**: outputs are heuristics meant for triage and can produce false positives. Always confirm with additional tooling or manual review.
+
+## apkInspector Integration
+
+This project relies on [apkInspector](https://github.com/erev0s/apkInspector) to reliably unpack APKs even when the ZIP structure is malformed or heavily obfuscated, and to decode `AndroidManifest.xml` straight from the package so permissions and components remain readable.
+
+## Requirements & Installation
 
 ```bash
 git clone https://github.com/guelfoweb/artifacts.git
 cd artifacts
+python3 -m venv .venv && source .venv/bin/activate   # recommended
 pip install -r requirements.txt
 ```
 
-# Usage
+Main dependencies:
+
+- Python 3.10+
+- [apkInspector](https://github.com/erev0s/apkInspector)
+- [LiteJDB](https://github.com/guelfoweb/litejdb)
+- prettytable
+
+### Track unreleased apkInspector patches
+
+`apkInspector` is installed from the upstream GitHub repository (branch `main`) so this project can consume fixes before the next PyPI release.
+
+If you want reproducible builds, pin a specific commit instead of `main` in both `requirements.txt` and `pyproject.toml`:
+
+```text
+apkInspector @ git+https://github.com/erev0s/apkInspector.git@<commit_sha>
+```
+
+## Quick Start
 
 ```bash
+# Full help
 python3 artifacts.py -h
-```
-### output
 
-```bash
-usage: artifacts [-h] [-v] [-r] [-s] [-a] [-l] [--del FAMILY_TO_DEL]
-                 [--add FAMILY_TO_ADD]
-                 [apkfile]
+# Run analysis + JSON report + similarity table
+python3 artifacts.py sample.apk -r -s
 
-apk analysis
-
-positional arguments:
-  apkfile              apk to analyze
-
-options:
-  -h, --help           show this help message and exit
-  -v, --version        show program's version number and exit
-  -r, --report         add report to json result
-  -s, --similarity     shows the similarities
-  -a, --activity       shows the activities
-  -l, --list-all       Lists all families in the db
-  --del FAMILY_TO_DEL  Delete a family from db
-  --add FAMILY_TO_ADD  Add a new family to db
+# List every family stored in LiteJDB
+python3 artifacts.py --list-all
 ```
 
-# Examples
+Sample output (truncated):
 
-In this example **SpyNote** malware was used.
-
-- [x] [Analysis](#analysis)
-- [x] [Similarity](#similarity)
-- [x] [Report](#report)
-
-## Analysis
-
-```bash
-python3 artifacts.py aggiornamento.apk
-```
-No parameters are required. The analysis shows:
-- the possible presence of `dex` files
-- any `libraries` used
-- statically detected `network` activities (check for false positives `ip`)
-- paths to get `root` privileges on Android devices
-- collects known `strings`, in the case of Base64 strings it tries to decode them
-- try to identify the `family` you belong to
-- prepare URLs for online `sandbox`
-
-### output
-
-```bash
+```json
 {
-    "version": "1.1.0",
-    "md5": "ab879f4e8f9cf89652f1edd3522b873d",
-    "dex": [
-        "classes.dex"
-    ],
-    "library": [],
-    "network": {
-        "ip": [
-            "1.0.0.1",
-            "1.1.1.1",
-            "8.8.4.4",
-            "8.8.8.8",
-            "54.63.34.15"
-        ],
-        "url": [
-            "https://static-maps.yandex.ru/1.x/?ll=%.6f",
-            "https://static-maps.yandex.ru/1.x/?ll=%.6f",
-            "tg://telegram.org"
-        ],
-        "param": [
-            "action="
-        ]
-    },
-    "root": [],
-    "string": {
-        "base64": [
-            [
-                "MTc4LjIzNi4yNDcuMTI0",
-                "178.236.247.124"
-            ],
-            [
-                "Nzc3MQ==",
-                "7771"
-            ],
-            [
-                "VHhUeFQ=",
-                "TxTxT"
-            ]
-        ],
-        "telegram_id": [],
-        "known": [
-            "ping"
-        ]
-    },
-    "family": {
-        "name": "SpyNote Italy 10/2023",
-        "match": 100.0,
-        "value": {
-            "permission": 100.0,
-            "application": 100.0,
-            "intent": 100.0
-        }
-    },
-    "sandbox": [
-        "https://tria.ge/s?q=ab879f4e8f9cf89652f1edd3522b873d",
-        "https://www.joesandbox.com/search?q=ab879f4e8f9cf89652f1edd3522b873d",
-        "https://www.virustotal.com/gui/search/ab879f4e8f9cf89652f1edd3522b873d",
-        "https://bazaar.abuse.ch/browse.php?search=md5:ab879f4e8f9cf89652f1edd3522b873d"
-    ],
-    "elapsed_time": 5.51
+  "version": "1.1.4",
+  "md5": "ab879f4e8f9cf89652f1edd3522b873d",
+  "sha1": "0b36f0f2ddfd73be3452dc955a6c97c45b4f78e9",
+  "sha256": "4d0ec8e8c1fbbac866f38b5df31b3a775f482373789a9b6d33ad7bfb17e8c576",
+  "package_name": "fdgfhfgjhfgj.dfgdfgdfhfjfgj.sdgdfgdfhd",
+  "main_activity": "com.brkwl.apkstore.MainActivity",
+  "dex": ["classes.dex"],
+  "network": {
+    "ip": ["1.1.1.1", "8.8.8.8"],
+    "url": ["tg://telegram.org"]
+  },
+  "string": {
+    "base64": [["MTc4LjIzNi4yNDcuMTI0", "178.236.247.124"]],
+    "known": ["ping"]
+  },
+  "activity_counts": {
+    "permission": 12,
+    "application": 4,
+    "intent": 7
+  },
+  "family": {
+    "name": "SpyNote Italy 10/2023",
+    "match": 100.0
+  }
 }
 ```
 
-## Similarity
+### How family matching works
 
-```bash
-python3 artifacts.py aggiornamento.apk --similarity
-```
+- **Feature extraction** – `lib/manifest.py` parses the decoded manifest and normalizes the three indicator buckets (`permission`, `application`, `intent`) as alphabetically sorted lists.
+- **Family dataset** – each entry in `data/patterns.json` provides the expected indicators for a known malware family. When you run `artifacts.py … -s`, the CLI loads this dataset via LiteJDB.
+- **Per-bucket scoring** – for every family we compute the [Jaccard similarity](https://en.wikipedia.org/wiki/Jaccard_index) between the APK bucket and the family bucket (e.g., `permission_score = |perm_apk ∩ perm_family| / |perm_apk ∪ perm_family| * 100`). The same formula is applied to `application` and `intent`.
+- **Final score** – the reported `family.match` is the arithmetic mean of the three bucket scores (all equally weighted) and is expressed as a percentage (e.g., `21.48` means ~21.48%). The `family.value` object surfaces the individual bucket percentages so you can tell *why* a match ranked higher (e.g., strong intent overlap but few shared permissions).
+- **Interpreting the report** – identical APK permissions can still yield different percentages if the top-ranked family changes, because each family contributes its own reference set. As a rule of thumb, scores below ~50 % should be treated as weak evidence (possible false positives or new families) and warrant manual review or dataset enrichment. Log the similarity table (`-s`) to compare how your indicators intersect with multiple candidates.
+- **Raw counts** – the `activity_counts` field in the main JSON result shows how many unique permissions, components, and intents were extracted from the APK, independent of any family match. This is useful when profiling previously unseen samples.
 
-Required parameter: `--similarity` or `-s`
+## CLI Commands
 
-Use the [Jaccard coefficient](https://en.wikipedia.org/wiki/Jaccard_index) to measure the percentage of similarity between the analyzed sample and the already known samples present in the dataset.
+| Flag | Description |
+| ---- | ----------- |
+| `-h, --help` | Show the inline help. |
+| `-v, --version` | Print the tool version. |
+| `-r, --report` | Emit a structured JSON report. |
+| `-s, --similarity` | Display the similarity table against the family DB. |
+| `-a, --activity` | Dump decoded manifest activities/permissions. |
+| `-l, --list-all` | List all families tracked in LiteJDB with the number of permissions, applications, and intents each entry defines. |
+| `--fast` | Faster scan: skip regex-heavy IOC extraction (`network`, `root`, `string`). |
+| `--del NAME` | Remove a family from the DB. |
+| `--add NAME` | Add the currently analyzed APK (pass the malware sample as the positional argument) to the DB under `NAME`. |
 
-The information compared concerns: `permission`, `application` and `intent`
+## Datasets & Reporting
 
-### output
+- **`data/patterns.json`** – defines known families, expected permissions, and application names. Updating this file improves matching without touching the Python code.
+- **`data/permission_categories.json` / `permission_description.json`** – provide human-readable descriptions used in reports.
+- The `-r` flag outputs category-based JSON (LOCATION, NETWORK, etc.) that can be pasted into tickets or knowledge bases.
 
-```bash
-+-----------------------+------------+-------------+--------+-------+
-|         family        | permission | application | intent | total |
-+-----------------------+------------+-------------+--------+-------+
-| SpyNote Italy 10/2023 |   100.0    |    100.0    | 100.0  | 100.0 |
-| SpyNote Italy 12/2023 |   84.85    |    31.11    | 57.14  |  57.7 |
-|         IRATA         |    48.0    |    56.52    | 47.83  | 50.78 |
-|     SpyNote Italy     |   84.38    |     1.32    |  56.0  | 47.23 |
-|   AlienBot/Cerberus   |   52.63    |     4.65    | 43.64  | 33.64 |
-|        MobiTool       |   33.96    |     2.32    | 47.44  |  27.9 |
-|         Joker         |   27.03    |     8.45    | 47.69  | 27.72 |
-|      SmsSpy Iran      |   28.57    |     2.86    | 50.82  | 27.42 |
-|       BadBazaar       |    37.5    |     5.48    | 36.71  | 26.56 |
-|        Zanubis        |   32.76    |     0.0     | 46.67  | 26.48 |
-|     AndroidMonitor    |   30.23    |     9.09    |  37.5  | 25.61 |
-|         Hydra         |   45.28    |     3.08    | 27.27  | 25.21 |
-|       XENOMORPH       |    42.0    |     4.17    | 25.93  | 24.03 |
-|        SMSAgent       |    38.1    |     0.0     | 32.31  | 23.47 |
-|       GoldDigger      |   35.48    |     4.0     | 30.77  | 23.42 |
-|          DAAM         |   47.73    |     1.82    | 20.41  | 23.32 |
-|         Ermac         |   38.78    |     2.6     | 28.17  | 23.18 |
-|          Sova         |   42.59    |     4.35    | 20.75  | 22.57 |
-|       GodFather       |    35.9    |     4.05    | 24.49  | 21.48 |
-|         SMSRat        |   18.92    |     0.0     | 45.07  | 21.33 |
-|        SpyNote        |   46.81    |     0.0     | 15.38  | 20.73 |
-|       DroidJack       |   44.74    |     0.0     | 13.46  |  19.4 |
-|         Brata         |   36.96    |     2.08    | 13.21  | 17.42 |
-|          Octo         |   31.37    |     0.0     | 20.75  | 17.38 |
-|        Xloader        |    38.1    |     0.0     | 13.73  | 17.27 |
-|      SmsSpy Italy     |   28.57    |     2.11    | 15.69  | 15.45 |
-|       CryCrypto       |   18.18    |     2.08    | 12.24  | 10.84 |
-+-----------------------+------------+-------------+--------+-------+
-```
+## Contributing
 
-## Report
+1. Open an issue describing the bug/feature.
+2. Work in a dedicated branch (e.g., `feature/apk-inspector-upgrade`).
+3. Run the core commands (`python3 artifacts.py sample.apk -r -s`, `--list-all`) and attach the output to your PR.
+4. Use imperative commit messages (e.g., `Add apkInspector extraction`).
 
-```bash
-python3 artifacts.py aggiornamento.apk --report
-```
+See [AGENTS.md](AGENTS.md) for extended contributor guidance (coding style, security hygiene, etc.).
 
-Required parameter: `--report` or `-r`
+## Developers
 
-Organizes permissions by category and describes what each permission means.
+- [Gianni Amato](https://github.com/guelfoweb/)
+- [Andrea Draghetti](https://github.com/drego85/)
 
-### output
+## License
 
-```bash
-{
-    "LOCATION": [
-        [
-            "ACCESS_COARSE_LOCATION",
-            "Allows an app to access approximate location."
-        ],
-        [
-            "ACCESS_FINE_LOCATION",
-            "Allows an app to access precise location."
-        ]
-    ],
-    "NETWORK": [
-        [
-            "ACCESS_NETWORK_STATE",
-            "Allows applications to access information about networks."
-        ],
-        [
-            "ACCESS_WIFI_STATE",
-            "Allows applications to access information about Wi-Fi networks."
-        ],
-        [
-            "CHANGE_WIFI_STATE",
-            "Allows applications to change Wi-Fi connectivity state."
-        ],
-        [
-            "INTERNET",
-            "Allows applications to open network sockets."
-        ]
-    ],
-    "ACCESSIBILITY": [
-        [
-            "BIND_ACCESSIBILITY_SERVICE",
-            "Must be required by an AccessibilityService, to ensure that only the system can bind to it."
-        ]
-    ],
-    "PHONE_CALLS": [
-        [
-            "CALL_PHONE",
-            "Allows an application to initiate a phone call without going through the Dialer user interface for the user to confirm the call."
-        ],
-        [
-            "READ_PHONE_STATE",
-            "Allows read only access to phone state, including the current cellular network information, the status calls, and a list Accounts registered on the device."
-        ]
-    ],
-    "CAMERA": [
-        [
-            "CAMERA",
-            "Required to be able to access the camera device."
-        ]
-    ],
-    "SCREENLOCK": [
-        [
-            "DISABLE_KEYGUARD",
-            "Allows applications to disable the keyguard if it is not secure."
-        ]
-    ],
-    "ACCOUNTS": [
-        [
-            "GET_ACCOUNTS",
-            "Allows access to the list of accounts in the Accounts Service."
-        ]
-    ],
-    "SOCIAL_INFO": [
-        [
-            "READ_CALL_LOG",
-            "Allows an application to read the user's call log."
-        ],
-        [
-            "READ_CONTACTS",
-            "Allows an application to read the user's contacts data."
-        ]
-    ],
-    "STORAGE": [
-        [
-            "READ_EXTERNAL_STORAGE",
-            "Allows an application to read from external storage."
-        ],
-        [
-            "WRITE_EXTERNAL_STORAGE",
-            "Allows an application to write to external storage."
-        ]
-    ],
-    "MESSAGES": [
-        [
-            "READ_SMS",
-            "Allows an application to read SMS messages."
-        ],
-        [
-            "SEND_SMS",
-            "Allows an application to send SMS messages."
-        ]
-    ],
-    "APP_INFO": [
-        [
-            "RECEIVE_BOOT_COMPLETED",
-            "Allows an application to receive the Intent."
-        ]
-    ],
-    "MICROPHONE": [
-        [
-            "RECORD_AUDIO",
-            "Allows an application to record audio."
-        ]
-    ],
-    "WALLPAPER": [
-        [
-            "SET_WALLPAPER",
-            "Allows applications to set the wallpaper."
-        ]
-    ],
-    "DISPLAY": [
-        [
-            "SYSTEM_ALERT_WINDOW",
-            "Allows an app to create windows using the type WindowManager. Shown on top of all other apps."
-        ]
-    ],
-    "AFFECTS_BATTERY": [
-        [
-            "WAKE_LOCK",
-            "Allows using PowerManager WakeLocks to keep processor from sleeping or screen from dimming."
-        ]
-    ]
-}
-```
+Released under [GPL-3.0](LICENSE). Treat every APK as hostile: operate inside isolated VMs, never commit binaries to the repo, and sanitize sensitive data before sharing artifacts.

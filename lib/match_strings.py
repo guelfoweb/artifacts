@@ -5,7 +5,7 @@ from . import match_regex
 def get(filepaths):
     regex = {
         "base64": r"([A-Za-z0-9+/]{6,}={1,2}|[A-Za-z0-9+/]{6,})",
-        "telegram_id": r"[^0-9](100[0-9]{10})[^0-9]",
+        "telegram_id": r"(?<!\w)(100\d{10})(?!\w)",
         "known": r"strapp_url|hakon|standby|LoaderGGPlay|AmexTroll|have been Encrypted|killbot|main_wang|vnc_open|keylog_active|sentSMS|jsdkfh|ping"
     }
 

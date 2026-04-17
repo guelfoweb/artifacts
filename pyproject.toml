@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "artifacts"
+version = "1.2.0"
+description = "artifacts is a CLI toolkit for static triage of suspicious APKs. It surfaces known strings, network indicators, manifest permissions/anomalies, and suggests likely malware families. Use it for the very first pass before switching to heavyweight tools such as Jadx, Bytecode-Viewer, or dynamic sandboxes."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0" }
+authors = [
+  { name = "Gianni Amato", email = "guelfoweb@gmail.com" }
+]
+maintainers = [
+  { name = "Andrea Draghetti", email = "drego85@draghetti.it" }
+]
+dependencies = [
+  "prettytable==3.9.0",
+  "apkInspector @ git+https://github.com/erev0s/apkInspector.git@main",
+  "litejdb @ git+https://github.com/guelfoweb/litejdb.git@main"
+]
+keywords = ["apk", "android", "malware", "triage", "cli"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Operating System :: OS Independent",
+  "Environment :: Console"
+]
+
+[project.urls]
+Homepage = "https://github.com/guelfoweb/artifacts"
+Source = "https://github.com/guelfoweb/artifacts"
+Bug Tracker = "https://github.com/guelfoweb/artifacts/issues"
+changelog = "https://github.com/guelfoweb/artifacts/CHANGELOG.md"
